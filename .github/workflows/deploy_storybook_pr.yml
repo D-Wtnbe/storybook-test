@@ -54,3 +54,33 @@ jobs:
       if: "steps.check.outputs.branch" 
       run: |
         curl -X POST -H "Authorization: token ${GITHUB_TOKEN}" -i ${API_ENDPOINT} -d "`printf '{\"body\":\"deploy to %s\"}' ${S3_URL}/"pr-"${GITHUB_PULL_REQUEST_NUMBER}`"
+        
+# Slack notification
+    - name: Slack Notification
+      uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      with:
+        status: custom
+        fields: workflow,job,commit,repo,ref,author,took
+        custom_payload: |
+          {
+            username: 'StoryBookURL通知BOT',
+            icon_emoji: ':github:',
+            attachments: [{
+              "color": '${{ job.status }}' === 'success' ? 'good' : '${{ job.status }}' === 'failure' ? 'danger' : 'warning',
+              "author_name": "${{ github.actor }}",
+              "author_icon": "${{ github.event.sender.avatar_url }}",
+              "text": "StoryBookのURLを生成しました。確認をお願いします。",
+              "fields": [
+                {
+                  "title": "変更内容",
+                  "value": "${{ github.event.issue.title }}"
+                },
+                {
+                  "title": "URL",
+                  "value": "${{ secrets.S3_URL }}/pr-${{ github.event.issue.number }}"
+                }],
+              }
+            ]
+          }
